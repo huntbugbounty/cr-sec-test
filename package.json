@@ -1,0 +1,11 @@
+{
+  "name": "cr-sec-test",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}
